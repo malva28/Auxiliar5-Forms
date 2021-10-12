@@ -4,8 +4,12 @@ from django.shortcuts import render, redirect
 # Create your views here.
 from todoapp.models import Tarea
 from categorias.models import Categoria
+from todoapp.forms import NuevaTareaForm
+from todoapp.forms import NuevaTareaModelForm
 
 from todoapp.models import User
+
+
 def tareas(request):  # the index view
     if request.user.is_authenticated:
         mis_tareas = Tarea.objects.filter(owner=request.user)# quering all todos with the object manager
@@ -13,21 +17,36 @@ def tareas(request):  # the index view
         mis_tareas = Tarea.objects.filter(owner=None)
     categorias = Categoria.objects.all()  # getting all categories with object manager
 
+    """
     if request.method == "GET":
-        return render(request, "todoapp/index.html", {"tareas": mis_tareas, "categorias": categorias})
+        form_tarea = NuevaTareaForm()
+        return render(request, "todoapp/index.html", {"tareas": mis_tareas,
+                                                      "categorias": categorias,
+                                                      "form_tarea": form_tarea})
 
-    if request.method == "POST":  # revisar si el método de la request es POST
-        if "taskAdd" in request.POST:  # verificar si la request es para agregar una tarea (esto está definido en el button)
-            titulo = request.POST["titulo"]  # titulo de la tarea
-            nombre_categoria = request.POST["selector_categoria"]  # nombre de la categoria
-            categoria = Categoria.objects.get(nombre=nombre_categoria)  # buscar la categoría en la base de datos
-            contenido = request.POST["contenido"]  # contenido de la tarea
+    if request.method == "POST":
+        form_tarea = NuevaTareaForm(request.POST)
+        if form_tarea.is_valid():
+            cleaned_data = form_tarea.cleaned_data
             if request.user.is_authenticated:
-                nueva_tarea = Tarea(titulo=titulo, contenido=contenido, categoria=categoria,owner=request.user)  # Crear la tarea
+                Tarea.objects.create(**cleaned_data, owner=request.user)
             else:
-                nueva_tarea = Tarea(titulo=titulo, contenido=contenido, categoria=categoria)
-            nueva_tarea.save()  # guardar la tarea en la base de datos.
-            return redirect("/tareas")  # recargar la página.
+                Tarea.objects.create(**cleaned_data)
+        return render(request, "todoapp/index.html", {"tareas": mis_tareas, "form_tarea": form_tarea})
+    """
+
+    if request.method == "GET":
+        form_tarea = NuevaTareaModelForm()
+        return render(request, "todoapp/index.html", {"tareas": mis_tareas, "form_tarea": form_tarea})
+
+    if request.method == "POST":
+        form_tarea = NuevaTareaModelForm(request.POST)
+        if form_tarea.is_valid():
+            nueva_tarea = form_tarea.save()  # save() de ModelForm
+            if request.user.is_authenticated:
+                nueva_tarea.owner = request.user
+                nueva_tarea.save()  # save() de Model
+        return render(request, "todoapp/index.html", {"tareas": mis_tareas, "form_tarea": form_tarea})
 
 
 from django.http import HttpResponseRedirect
